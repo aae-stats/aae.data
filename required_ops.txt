@@ -1,0 +1,6 @@
+filter Netting and electro fishing
+
+check XY data
+	lat longs
+	Easting Northings (with Zone)
+

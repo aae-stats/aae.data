@@ -1,0 +1,281 @@
+---
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+options(java.parameters = c("-XX:+UseConcMarkSweepGC", "-Xmx8192m"))
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(xlsx)
+library(stringr)
+library(dplyr)
+# library(pins)
+source("data_qaqc_func.R")
+# library(tinytex)
+# library(htmlTable)
+# library(kableExtra)
+
+
+in_file <- choose.files(default = "O:/DATA/DOCS/PROJECTS/AAE_DB/DATA/*.*", multi = FALSE)
+message(in_file)
+
+#import field lookup
+id <- "1vVoTNQ3uxFWHzWkUa20zlgiLZS7jh6Vn"
+fields_lu <- read.csv(sprintf("https://docs.google.com/uc?id=%s&export=download", id), stringsAsFactors = FALSE)
+
+# url <- "https://docs.google.com/uc?id=1vVoTNQ3uxFWHzWkUa20zlgiLZS7jh6Vn&export=download"
+# fields_lu <- read.csv(pin(url))
+# colnames(fields_lu)[1] = "fields"
+
+#AAEDB Standard Fields
+id <- "1UOjob2p2IS3bKm55orDzQn_chw4pqwrW"
+standard_fields <- read.csv(sprintf("https://docs.google.com/uc?id=%s&export=download", id), stringsAsFactors = FALSE)
+
+#AAEDB Gear Types
+id <- "123Bpt944C_OF95J0GwdnvHICwF4_hGrs"
+gear_lu <- read.csv(sprintf("https://docs.google.com/uc?id=%s&export=download", id), stringsAsFactors = FALSE)
+
+
+#VBA species
+id <- "11TYRUWSE2Xfdmg_beXt5Hz3fuvX950j5"
+species_lu <- read.csv(sprintf("https://docs.google.com/uc?id=%s&export=download", id), stringsAsFactors = FALSE)
+species_lu$species <- tolower(species_lu$scientific_name)
+
+
+#get excel data
+# in_file <- file.choose()
+
+
+# in_file <- choose.files(default = "O:/DATA/DOCS/PROJECTS/AAE_DB/DATA/*.*", multi = FALSE)
+# message(in_file)
+# in_file = "O:/DATA/DOCS/PROJECTS/AAE_DB/DATA/Kiewa.King Habitat Survey_data 2020.xlsx"
+in_data <- read.xlsx2(in_file, 1)
+file_name <- basename(in_file)
+
+xlsx_data <- in_data
+
+# colnames(xlxs_data)
+# length(colnames(xlxs_data))
+
+for(i in 1:length(names(xlsx_data))){
+  colnames(xlsx_data)[i] <- tolower(
+    str_replace_all(
+      str_replace_all(
+        str_replace(colnames(xlsx_data)[i],"^X\\.","") #Remove leading X.
+      ,"^\\.|\\.+$" , "") #Remove trailing .
+    ,"\\.+" , "_") #replace .+ with _
+  )
+  
+  # print(colnames(my_data)[i])
+  message(colnames(xlsx_data)[i])
+}
+
+#remove and columns without a name
+xlsx_data <- xlsx_data[ , !(names(xlsx_data) == "")]
+
+
+# str(xlsx_data)
+
+#Field name check
+xlsx_fields <- as.data.frame(names(xlsx_data), stringsAsFactors = FALSE)
+colnames(xlsx_fields)[1] = "xlsx_fields"
+
+xlsx_fields.match = left_join(xlsx_fields, fields_lu, by=c("xlsx_fields"="in_col"))
+xlsx_fields.unmatched = filter(xlsx_fields.match, is.na(out_col))
+
+xlsx_fields.match_only <- filter(xlsx_fields.match, is.na(out_col)==FALSE)
+xlsx_fields.match_only = xlsx_fields.match_only$out_col
+xlsx_fields.match_only = as.data.frame(xlsx_fields.match_only)
+colnames(xlsx_fields.match_only)[1] = "fields"
+xlsx_fields.match_only$xlsx_fields = xlsx_fields.match_only$fields
+
+xlsx_fields.match_required = full_join(standard_fields, xlsx_fields.match, by=c("fields"="out_col"))
+xlsx_fields.required = filter(xlsx_fields.match_required, required==1)
+xlsx_fields.required[is.na(xlsx_fields.required$xlsx_fields), ]$fields = paste0("**", xlsx_fields.required[is.na(xlsx_fields.required$xlsx_fields), ]$fields, "**")
+xlsx_fields.required[is.na(xlsx_fields.required$xlsx_fields), ]$xlsx_fields = "**NA**"
+
+#data_integrity
+data_validate <- xlsx_fields.match_required[is.na(xlsx_fields.match_required$xlsx_fields) == FALSE & is.na(xlsx_fields.match_required$fields) == FALSE,]
+data_validate = data_validate[!is.na(data_validate$data_type),]
+
+date_fields <- na.omit(data_validate[data_validate$data_type == "date",])
+dates.num <- as.data.frame(sapply(as.character.Date(xlsx_data[,date_fields[,"xlsx_fields"]]),as.numeric))
+xlsx_data[paste0(date_fields[,"fields"], "_formatted")] <-as.data.frame( lapply(dates.num, conv_date))
+
+# xlsx_data$formatted_date <- as.Date(as.numeric(as.character.Date(xlsx_data[,xlsx_fields.match_required[xlsx_fields.match_required$data_type == "date",c("xlsx_fields")][1]])), origin = "1899-12-30")
+
+
+```
+
+---
+title: "QA for [`r file_name`]" 
+author: "AAE Data QA v0.1 " 
+date: "`r Sys.Date()`"
+---
+**`r nrow(xlsx_data)` rows of data**
+
+## **Input Column Name Check**
+
+This section reports back on the column names used in the input Excel file and tests how well they match to AAE standardised column names and the required columns for the AAE Database.
+
+### Input Excel file column names
+```{r xlsx_data, echo=FALSE}
+# kable(xlsx_fields, caption="Column names in input Excel file")
+names(xlsx_data)
+
+```
+
+----
+
+#### **These columns don't match any AAE standardised column names**
+```{r xlsx_fields.unmatched, echo=FALSE}
+kable(xlsx_fields.unmatched$xlsx_fields, col.names = "Unmatched Excel column names")
+```
+
+----
+
+#### **Required data that wasn't detected in the input Excel file (bold)**
+Some required information may be ignored if not relevant (e.g.no netting information required if netting didn't take place).
+
+
+```{r xlsx_fields.required, echo=FALSE, results='asis'}
+
+if(length(xlsx_fields.required$xlsx_fields == "**NA**") > 0){
+   cat(colourise('**There is some required information missing (in bold text). Other required data may have been matched with different columns. Check names and use the [standardised AAE column names](https://delwpvicgovau.sharepoint.com/:x:/s/ecm_92/Ef0hdVPgLa5Eud1xoKyASvQBdQWWJhW0BmR-wpSLPCT_KA?e=Qzpv0K) to ensure correct matches.** \n\n', "red"))
+}else
+{
+   cat(colourise('**Good job! Looks like all required information is accounted for.** \n\n', "green"))
+}
+
+```
+```{r, echo=FALSE } 
+
+kable(xlsx_fields.required[,c(1,2,6)], col.names = c("Information Group","Required Columns", "Matched Input Columns"))
+```
+
+---
+
+## **Data QA**
+
+This section reports back on the data within the input Excel file columns matched to the [**standardised AAE column names**](https://delwpvicgovau.sharepoint.com/:x:/s/ecm_92/Ef0hdVPgLa5Eud1xoKyASvQBdQWWJhW0BmR-wpSLPCT_KA?e=Qzpv0K). Data columns are tested for their numeric integrity and whether certain columns have been filled for every record.
+
+
+```{r data_validate, echo=FALSE, results='asis', warning=FALSE}
+
+errors_found = 0
+
+for (i in 1:nrow(data_validate)){
+  
+  test_set <- xlsx_data[,data_validate$xlsx_fields[i]]
+  test_set <- as.character(test_set, stringsAsFactors = FALSE)
+  test_set[which(test_set == "")] <- "No Value"
+  test_set <- as.data.frame(test_set, stringsAsFactors = FALSE)
+  
+  if(data_validate$data_type[i] == "numeric"){
+    
+    errors_found <- numeric_qaqc(data_validate, test_set, i)
+
+  }else if(data_validate$data_type[i] == "string"){
+    
+    # cat(paste0(i, " ", '[',data_validate$xlsx_fields[i],"] \n\n"))
+    errors_found <- string_qaqc(data_validate, test_set, i)
+    
+  }else if(data_validate$data_type[i] == "date"){
+    
+    # if(is.null(test_set)){
+    errors_found <- date_qaqc(xlsx_data, data_validate, test_set, i)
+    # }
+    # cat(colourise(paste('**[',data_validate$xlsx_fields[i],'] is date** \n\n', sep=""), "green"))
+    
+  }else if(data_validate$data_type[i] == "coordinate"){
+    
+    # errors_found <- numeric_qaqc_depreciated(data_validate, test_set, i)
+    errors_found <- coordinate_qaqc_beta(data_validate, test_set, i)
+    
+  }else{
+    cat(colourise(paste('**[',data_validate$xlsx_fields[i],"] is a new format and hasn't been assessed** \n\n", sep=""), "blue"))
+  }
+ 
+}
+
+# if(errors_found == 0){
+#   cat(colourise(paste('**Well done! All data columns that matched with AAE standarised fields have valid data** \n\n', sep=""), "green"))
+# }
+
+```
+
+---
+
+## **Data Summary**
+
+Data summaries of some columns that matched AAE standardised column names.
+
+```{r, echo=FALSE, results='asis', warning=FALSE}
+
+# levels(xlsx_data[,data_validate[1,]$xlsx_fields])
+# select(xlsx_data, site) %>% distinct(site) %>% arrange(site)
+# sites <- select(xlsx_data, site) %>% distinct(site) %>% arrange(site)
+# 
+# rows <- seq_len(nrow(sites) %/% 2)
+# print(kable(list(sites[rows,1],  
+#            matrix(numeric(), nrow=0, ncol=1),
+#            sites[-rows, 1]), 
+#       caption = "This is the caption.",
+#       label = "tables", format = "latex", booktabs = TRUE) )
+
+
+
+for (i in 1:nrow(data_validate)){
+  
+  # cat(paste('[',data_validate$xlsx_fields[i],"] \n\n", sep=""))
+  
+  if(data_validate$fields[i] == "waterbody"){
+    
+    waterbody_summary(xlsx_data, data_validate)
+
+  }else if(data_validate$fields[i] == "survey_date"){
+    
+    survey_date_summary(xlsx_data, data_validate)
+
+  }else if(data_validate$fields[i] == "gear_type"){
+
+    gear_type_summary(xlsx_data, data_validate)
+
+  }else if(data_validate$fields[i] == "species"){
+    
+    species_summary(xlsx_data, data_validate)
+    
+  }else if(data_validate$fields[i] == "x_coordinate" | data_validate$fields[i] == "y_coordinate"){
+    
+    coordinate_summary(xlsx_data, data_validate, i)
+    
+  }else{
+    # cat(colourise(paste('**[',data_validate$xlsx_fields[i],"] is new format and hasn't been assessed** \n\n", sep=""), "blue"))
+  }
+ 
+}
+
+```
+
+---
+
+
+
+   <!-- # cat('\n')   -->
+   <!-- # cat("#This is a heading for ", i, "\n\n")  -->
+   <!-- # hist(cars[,i]) -->
+   <!-- # cat('\n') -->
+
+
+<!-- ## Including Plots -->
+
+<!-- You can also embed plots, for example: -->
+
+<!-- ```{r pressure, echo=FALSE} -->
+<!-- plot(pressure) -->
+<!-- ``` -->
+
+<!-- Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot. -->
