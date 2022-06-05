@@ -1,4 +1,7 @@
 
+# Functions related to the QA/QC markdown procedure
+
+
 colourise <- function(x, colour) {
   if (knitr::is_latex_output()) {
     sprintf("\\textcolor{%s}{%s}", colour, x)
@@ -7,6 +10,7 @@ colourise <- function(x, colour) {
             x)
   } else x
 }
+
 
 conv_date <- function(x) as.Date(x, origin = "1899-12-30")
 
