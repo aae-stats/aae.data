@@ -110,24 +110,62 @@ Several fields require manual checking to ensure that included values are correc
 # field summaries
 for (i in seq_along(field_summary)) {
   cat(colourise(field_summary[[i]]$message$message, field_summary[[i]]$colour))
-  print(kable(field_summary[[i]]$table))
+  print(
+    kable(
+      field_summary[[i]]$table,
+      caption = paste0("List of all unique values of ", paste0(field_summary[[i]]$field, collapse = " and "), ". NA values indicate missing or incorrectly formatted values in the input data set (e.g., characters mixed with numbers, unrecognised symbols).")
+    )
+  )
+  cat("\n")
+  cat("\n\n ---- \n\n")
+}
+
+# print list of species if required
+if (!is.null(spp)) {
+  print(kable(
+    spp,
+    caption = "All species included in input data set with matched names from the VBA database where possible. Where no match is found, possible alternatives are suggested if a similar name exists in the VBA database.",
+    col.names = c("Input species", "VBA scientific name", "VBA common name", "Possible matches")
+    
+  )
+        )
   cat("\n")
   cat("\n\n ---- \n\n")
 }
 
 # size measurements
-## TODO: flatten this into a neater table with an extra column for field (all fields in one table)
 for (i in seq_along(measurement_summary)) {
+  
+  # print a neat table listing min/max of these values
   cat(colourise(measurement_summary[[i]]$message$message, field_summary[[i]]$colour))
   print(kable(measurement_summary[[i]]$table,
               col.names = c(
                 "Group",
                 paste0(measurement_summary[[i]]$field, " (minimum value)"),
+                paste0(measurement_summary[[i]]$field, " (median)"),
+                paste0(measurement_summary[[i]]$field, " (mean)"),
                 paste0(measurement_summary[[i]]$field, " (maximum value)")
               )
   ))
   cat("\n")
   cat("\n\n ---- \n\n")
+  
+  # and create a plot to go with this, removing NA records
+  p <- measurement_summary[[i]]$data %>%
+    filter(!is.na(x)) %>%
+    ungroup() %>%
+    ggplot() +
+    geom_histogram(aes(x = x), bins = 20) +
+    xlab(measurement_summary[[i]]$field) +
+    ylab("Count")
+
+  # facet by species if included in data set
+  if (ncol(measurement_summary[[i]]$data) == 2)
+    p <- p + facet_wrap( ~ species, scales = "free")
+  
+  # and plot it
+  print(p)
+  
 }
 
 ```

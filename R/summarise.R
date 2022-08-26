@@ -65,18 +65,25 @@ summarise_measurements <- function(x, val, field) {
     #   if available
     if (length(sp_input) == 0) {
       x <- x %>% select(all_of(input))
+      plot_data <- data.frame(x = x %>% pull(1))
     } else {
       x <- x %>% 
         select(all_of(sp_input), all_of(input)) %>%
         group_by(across(1))
+      plot_data <- data.frame(
+        x = x %>% pull(2),
+        species = x %>% pull(1)
+      )
     }
-    
+        
     # calculate weight range for input variable
     x <- x %>%
       summarise(
         across(all_of(input),
                list(
                  min = ~ suppressWarnings(min(.x, na.rm = TRUE)),
+                 median = ~ suppressWarnings(median(.x, na.rm = TRUE)),
+                 mean = ~ suppressWarnings(mean(.x, na.rm = TRUE)),
                  max = ~ suppressWarnings(max(.x, na.rm = TRUE))
                )
         )
@@ -95,7 +102,8 @@ summarise_measurements <- function(x, val, field) {
   list(
     message = message,
     table = x,
-    field = field
+    field = field,
+    data = plot_data
   )
   
 }

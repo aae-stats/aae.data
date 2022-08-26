@@ -6,7 +6,7 @@
 #' 
 #' @importFrom rmarkdown render
 #' @importFrom rstudioapi getActiveProject
-#' @import dplyr
+#' @import dplyr ggplot2
 #'
 #' @param data a data set to be imported to the AAEDB, provided
 #'   as a \code{matrix}, \code{data.frame}, or \code{tibble}
@@ -45,7 +45,7 @@ generate_report <- function(data, output = "template.html") {
   duplicates <- check_duplicates(data, validated_fields)
   
   # need to summarise a few fields
-  fields_to_check <- list("waterbody", "survey_date", "gear_type", c("x_coordinate", "y_coordinate"), "species")
+  fields_to_check <- list("waterbody", "survey_date", "gear_type", c("x_coordinate", "y_coordinate"))
   
   # but focus on those that exist
   idx <- sapply(fields_to_check, function(x, y) any(x %in% y), y = fields$out_col[fields$matched])
@@ -62,10 +62,39 @@ generate_report <- function(data, output = "template.html") {
   # but focus on those that exist
   measurements_to_summarise <- measurements_to_summarise[measurements_to_summarise %in% fields$out_col[fields$matched]]
   
-  # calculate summaries
+  # calculate summaries, including some basic data for plotting
   measurement_summary <- vector("list", length = length(measurements_to_summarise))
   for (i in seq_along(measurements_to_summarise))
     measurement_summary[[i]] <- summarise_measurements(data, validated_fields, field = measurements_to_summarise[i])
+
+  # check species if provided
+  spp <- NULL
+  if ("species" %in% fields$out_col[fields$matched]) {
+    
+    sp_input <- validated_fields %>% 
+      filter(fields == "species") %>% 
+      pull(xlsx_fields)
+    
+    # grab the look-up for gear types
+    species_lu <- fetch_vba_species()
+    
+    # match this to the data set
+    spp <- data %>% 
+      pull(all_of(sp_input)) %>%
+      unique()
+    idx <- match(spp, species_lu$scientific_name)
+    spp <- data.frame(
+      spp = spp,
+      vba_scientific_name = species_lu$scientific_name[idx],
+      vba_common_name = species_lu$common_name[idx],
+      did_you_mean = partial_match(spp, species_lu$scientific_name, max_distance = 0.2)
+    ) %>%
+      mutate(
+        vba_scientific_name = ifelse(is.na(vba_scientific_name), "**No match**", vba_scientific_name),
+        did_you_mean = ifelse(vba_scientific_name == "**No match**", did_you_mean, "")
+      )
+
+  }
   
   # set rmd path
   rmd_path <- paste0(
