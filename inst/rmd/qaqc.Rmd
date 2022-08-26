@@ -1,0 +1,135 @@
+---
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+title: QA for AAEDB uploads
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+options(java.parameters = c("-XX:+UseConcMarkSweepGC", "-Xmx8192m"))
+knitr::opts_chunk$set(echo = TRUE)
+standards_link <- "https://delwpvicgovau.sharepoint.com/:x:/s/ecm_92/Ef0hdVPgLa5Eud1xoKyASvQBdQWWJhW0BmR-wpSLPCT_KA?e=Qzpv0K"
+```
+
+This is an auto-generated report assessing the compatibility of the provided data set with the AAE database. The submitted file includes `r nrow(data)` rows of data.
+
+## Input fields
+
+There were `r ncol(data)` fields in the submitted data set. `r sum(fields$matched)` of these fields matched known fields in the AAE database. The remaining `r sum(fields$unmatched)` fields had no known match, although partial matches were available for `r sum(unmatched$did_you_mean != "<None available>")` of these fields.
+
+```{r input-fields, echo=FALSE}
+# grab relevant columns from fields checks
+all_fields <- fields %>%
+  select(xlsx_fields, matched, out_col) %>%
+  left_join(required %>% select(xlsx_fields, required), by = "xlsx_fields") %>%
+  left_join(unmatched %>% select(xlsx_fields, did_you_mean), by = "xlsx_fields")
+
+# format columns so they print nicely
+all_fields <- all_fields %>%
+  mutate(
+    matched = ifelse(matched, "Yes", "No"),
+    out_col = ifelse(required, paste0("**", out_col, "**"), out_col),
+    out_col = ifelse(is.na(out_col) | out_col == "**NA**", "", out_col),
+    out_col = ifelse(out_col == "" & matched == "Yes", xlsx_fields, out_col),
+    did_you_mean = ifelse(is.na(did_you_mean), "", did_you_mean)
+  ) %>%
+  select(-required)
+    
+# print pretty table
+kable(
+  all_fields,
+  caption = "Fields included in input file and matched fields in the AAEDB. Where an input field was not recognised, suggested matches are listed in the right-hand column.",
+  col.names = c("Input field", "Match found?", "Matched field", "Possible matches")
+)
+```
+
+
+## Recommended fields
+
+Several fields are recommended for AAEDB uploads. The input data set was missing `r sum(required$missing_required)` of these fields. These fields should be treated as requirements unless they are not relevant to a specific field method (e.g., netting information is not required if netting was not used).
+
+```{r required-fields, echo=FALSE, results='asis'}
+missing <- missing_fields(required, standards_link)
+cat(colourise(missing$message, colour = missing$colour))
+```
+
+```{r list-required-fields, echo=FALSE} 
+# pull out a subset of info and format it so it prints neatly
+all_required <- required %>% 
+  select(info_group, fields, xlsx_fields) %>%
+  mutate(xlsx_fields = ifelse(is.na(xlsx_fields), "", xlsx_fields))
+
+# count the total number of matches per required column
+matches <- all_required %>%
+  select(fields, xlsx_fields) %>%
+  group_by(fields) %>%
+  summarise(count = ifelse(all(xlsx_fields == ""), 0, length(xlsx_fields)))
+
+# add this info to the table
+all_required <- all_required %>% 
+  left_join(matches, by = "fields")
+
+# print a pretty table
+kable(
+  all_required,
+  caption = "List of required fields for AAEDB uploads. Required fields not found in the input are shown in bold.",
+  col.names = c("Information group", "Required columns", "Matched input columns", "Number of matches in input")
+)
+```
+
+
+## Data QA
+
+This section reports on all columns in the input data set that match to a [**standardised AAE column name**](`r standards_link`). All data fields are checked for missing or unexpected values and site descriptions are checked for duplicate or repeated values. There were `r sum(sapply(qaqc, function(x) x$errors))` data fields containing potential errors.
+
+```{r validate, echo=FALSE, results="asis"}
+for (i in seq_along(qaqc)) {
+  cat(colourise(qaqc[[i]]$message$message, qaqc[[i]]$message$colour))
+  tables <- qaqc[[i]][c("missing", "invalid", "unexpected")]
+  tables <- tables[!sapply(tables, is.null)]
+  for (j in seq_along(tables)) {
+    if (ncol(tables[[j]]) == 1)
+      colnames(tables[[j]]) <- "Value"
+    if (ncol(tables[[j]]) == 2)
+      colnames(tables[[j]]) <- c("Value", "Count")
+    kable(tables[[j]])
+  }
+}
+cat(colourise(duplicates$message$message, duplicates$message$colour))
+```
+
+
+## Data summaries
+
+Several fields require manual checking to ensure that included values are correct. This section lists all unique records of waterbody, survey date, gear type, coordinates, and species where these variables are included in the input data set. In addition, the ranges of common size measurements (total length, fork length, and weight) are listed if included in the input data set.
+
+
+```{r print-summaries, echo=FALSE, results="asis"}
+# field summaries
+for (i in seq_along(field_summary)) {
+  cat(colourise(field_summary[[i]]$message$message, field_summary[[i]]$colour))
+  print(kable(field_summary[[i]]$table))
+  cat("\n")
+  cat("\n\n ---- \n\n")
+}
+
+# size measurements
+## TODO: flatten this into a neater table with an extra column for field (all fields in one table)
+for (i in seq_along(measurement_summary)) {
+  cat(colourise(measurement_summary[[i]]$message$message, field_summary[[i]]$colour))
+  print(kable(measurement_summary[[i]]$table,
+              col.names = c(
+                "Group",
+                paste0(measurement_summary[[i]]$field, " (minimum value)"),
+                paste0(measurement_summary[[i]]$field, " (maximum value)")
+              )
+  ))
+  cat("\n")
+  cat("\n\n ---- \n\n")
+}
+
+```
+
+---
