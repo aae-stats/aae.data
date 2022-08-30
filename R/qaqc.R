@@ -68,7 +68,7 @@ numeric_qaqc <- function(data, input, match, no_null){
   # count entries that do not convert to numeric values
   test_result <- data %>%
     select(test, numeric_test) %>%
-    filter(is.na(numeric_test)) %>%
+    filter(is.na(numeric_test) & test != "No value") %>%
     group_by(test, numeric_test) %>%
     summarise(count = n(), .groups = "drop")
   
