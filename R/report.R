@@ -76,7 +76,7 @@ generate_report <- function(data, filename = NULL, output = "template.html") {
           )
         )) %>%
         select(3, 4, 1, 2)
-      colnames(field_summary[[i]]$table) <- c("Survey year", "Survey month", "Survey date", "Total surveys")
+      colnames(field_summary[[i]]$table) <- c("Survey year", "Survey month", "Survey date", "Total records")
     }
     
   }
@@ -128,7 +128,7 @@ generate_report <- function(data, filename = NULL, output = "template.html") {
     
     # add catch info
     for (i in seq_along(catch_summary)) {
-      if ("species" %in% colnames(catch_summary[[i]])) {
+      if ("species" %in% colnames(catch_summary[[i]]$table)) {
         spp <- spp %>% left_join(catch_summary[[i]]$table, by = c("spp" = "species"))
         colnames(spp)[ncol(spp)] <- paste0("Total ", catches_to_summarise[i])
       }
