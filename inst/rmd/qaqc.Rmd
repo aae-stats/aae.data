@@ -136,7 +136,7 @@ for (i in seq_along(measurement_summary)) {
   
   # filter out missing or nan values
   measurement_summary[[i]]$table <- measurement_summary[[i]]$table %>%
-    filter(across(1, ~ !grepl("No fish", .x)))
+    filter(across(1, ~ !grepl("No fish", .x, ignore.case = TRUE)))
   
   # print a neat table listing min/max of these values
   cat(colourise(measurement_summary[[i]]$message$message, field_summary[[i]]$colour))
