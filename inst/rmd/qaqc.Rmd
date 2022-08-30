@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 standards_link <- "https://delwpvicgovau.sharepoint.com/:x:/s/ecm_92/Ef0hdVPgLa5Eud1xoKyASvQBdQWWJhW0BmR-wpSLPCT_KA?e=Qzpv0K"
 ```
 
-This is an auto-generated report assessing the compatibility of the provided data set with the AAE database. The submitted file includes `r nrow(data)` rows of data.
+This is an auto-generated report assessing the compatibility of the `r params$title` data set with the AAE database. The submitted file includes `r nrow(data)` rows of data.
 
 ## Input fields
 
@@ -94,7 +94,7 @@ for (i in seq_along(qaqc)) {
       colnames(tables[[j]]) <- "Value"
     if (ncol(tables[[j]]) == 2)
       colnames(tables[[j]]) <- c("Value", "Count")
-    kable(tables[[j]])
+    print(kable(tables[[j]]))
   }
 }
 cat(colourise(duplicates$message$message, duplicates$message$colour))
@@ -122,10 +122,11 @@ for (i in seq_along(field_summary)) {
 
 # print list of species if required
 if (!is.null(spp)) {
+  colnames(spp)[1:4] <- c("Input species", "VBA scientific name", "VBA common name", "Possible matches")
   print(kable(
     spp,
     caption = "All species included in input data set with matched names from the VBA database where possible. Where no match is found, possible alternatives are suggested if a similar name exists in the VBA database.",
-    col.names = c("Input species", "VBA scientific name", "VBA common name", "Possible matches")
+    col.names = col_names
     
   )
         )

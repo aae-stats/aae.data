@@ -16,7 +16,14 @@
 #' 
 #' @examples 
 #' # to add
-generate_report <- function(data, output = "template.html") {
+generate_report <- function(data, title = NULL, output = "template.html") {
+  
+  # set report title
+  if (is.null(title)) {
+    title <- "provided"
+  } else {
+    title <- paste0("**", title, "**")
+  }
   
   # clean column names
   data <- clean_columns(data)
@@ -56,17 +63,24 @@ generate_report <- function(data, output = "template.html") {
   for (i in seq_along(fields_to_check))
     field_summary[[i]] <- summarise_field(data, validated_fields, field = fields_to_check[[i]])
   
-  # check basic size measurements and extract ranges
+  # check basic size measurements and extract ranges but focus on those that exist
   measurements_to_summarise <- c("total_length", "fork_length", "weight")
-
-  # but focus on those that exist
   measurements_to_summarise <- measurements_to_summarise[measurements_to_summarise %in% fields$out_col[fields$matched]]
   
-  # calculate summaries, including some basic data for plotting
+  # calculate summaries of measurements (lengths, weights), including some basic data for plotting
   measurement_summary <- vector("list", length = length(measurements_to_summarise))
   for (i in seq_along(measurements_to_summarise))
-    measurement_summary[[i]] <- summarise_measurements(data, validated_fields, field = measurements_to_summarise[i])
+    measurement_summary[[i]] <- summarise_measurement(data, validated_fields, field = measurements_to_summarise[i])
 
+  # check basic catch info and calculate total catch
+  catches_to_summarise <- c("collected", "observed")
+  catches_to_summarise <- catches_to_summarise[catches_to_summarise %in% fields$out_col[fields$matched]]
+  
+  # calculate summaries of catch (collected, observed), including basic data for plotting
+  catch_summary <- vector("list", length = length(catches_to_summarise))
+  for (i in seq_along(catches_to_summarise))
+    catch_summary[[i]] <- summarise_catch(data, validated_fields, field = catches_to_summarise[i])
+  
   # check species if provided
   spp <- NULL
   if ("species" %in% fields$out_col[fields$matched]) {
@@ -93,6 +107,14 @@ generate_report <- function(data, output = "template.html") {
         vba_scientific_name = ifelse(is.na(vba_scientific_name), "**No match**", vba_scientific_name),
         did_you_mean = ifelse(vba_scientific_name == "**No match**", did_you_mean, "")
       )
+    
+    # add catch info
+    for (i in seq_along(catch_summary)) {
+      if ("species" %in% colnames(catch_summary[[i]])) {
+        spp <- spp %>% left_join(catch_summary[[i]] %>% select(count), by = c("spp" = "species"))
+        colnames(spp)[ncol(spp)] <- paste0("Total ", catches_to_summarise[i])
+      }
+    }
 
   }
   
@@ -114,6 +136,7 @@ generate_report <- function(data, output = "template.html") {
   rmarkdown::render(
     input = rmd_path,
     output_file = output_path,
+    params = list(title = title),
     encoding = "UTF-8",
     quiet = TRUE
   )

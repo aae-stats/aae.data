@@ -129,9 +129,9 @@ numeric_qaqc <- function(data, input, match, no_null){
       issue <- "negative"
       if (errors) {
         issue <- "incorrect and negative"
-        if (grepl("missing", message))
+        if (grepl("missing", message$message))
           issue <- "missing and negative"
-        if (grepl("missing and incorrect", message))
+        if (grepl("missing and incorrect", message$message))
           issue <- "missing, incorrect, and negative"
       }
       message <- fail_message(input, match, "numeric", issue = issue)
@@ -215,7 +215,8 @@ string_qaqc <- function(data, input, match, no_null) {
       left_join(gear_type_lu, by = c("test_upper" = "gear_type")) %>%
       select(test, gear_desc) %>%
       filter(is.na(gear_desc)) %>%
-      distinct(test) %>%
+      group_by(test) %>%
+      summarise(count = n()) %>%
       arrange(test)
     
     # there is an issue if there are any NA gear descriptions
@@ -249,7 +250,8 @@ string_qaqc <- function(data, input, match, no_null) {
       left_join(species_lu, by = c("test_lower" = "species")) %>%
       select(test_lower, test, vba_taxon_id) %>%
       filter(is.na(vba_taxon_id), test_lower != "no fish") %>%
-      distinct(test) %>%
+      group_by(test) %>%
+      summarise(count = n()) %>%
       arrange(test)
     
     # there is an issue if there are any NA VBA taxon IDs
@@ -512,8 +514,9 @@ test_coordinate <- function(x, type, zone = NULL) {
     "easting" = easting_bounds
   )
   
-  # and return NA is values are outside of these bounds
-  ifelse(x >= bounds[1] & x <= bounds[2], x, NA)
+  # and return -999 if values are outside of these bounds
+  #   (preserve NAs because missing is not the same error)
+  ifelse(x >= bounds[1] & x <= bounds[2], x, -999)
   
 }
 
@@ -571,7 +574,7 @@ coordinate_qaqc <- function(data, input, match, no_null, mga = NULL){
     
     if (coord_type == "lat_lon") {
       
-      # replace values with NA if they sit well beyond Victoria
+      # replace values with -999 if they sit well beyond Victoria
       if (match %in% c("x_coordinate", "section_start_x", "section_end_x")) {
         data$coord_num <- test_coordinate(data$coord_num, type = "longitude")
         range <- "140** to **151"
@@ -583,7 +586,8 @@ coordinate_qaqc <- function(data, input, match, no_null, mga = NULL){
       
       # count up the NA values
       test_result <- data %>%
-        filter(is.na(coord_num)) %>%
+        filter(coord_num == -999) %>%
+        # filter(is.na(coord_num)) %>%
         group_by(test, coord_num) %>%
         summarise(count = n(), .groups = "drop")
       
@@ -650,7 +654,7 @@ coordinate_qaqc <- function(data, input, match, no_null, mga = NULL){
       
       if (!errors) {
         
-        # replace values with NA if they sit well beyond Victoria
+        # replace values with -999 if they sit well beyond Victoria
         unique_mga <- unique(mga_zone)
         if (match == "x_coordinate") {
           for (i in seq_along(unique_mga)) {
@@ -669,7 +673,7 @@ coordinate_qaqc <- function(data, input, match, no_null, mga = NULL){
         
         # count up the NA values
         test_result <- data %>%
-          filter(is.na(coord_num)) %>%
+          filter(coord_num == -999) %>%
           group_by(test, coord_num) %>%
           summarise(count = n(), .groups = "drop")
         
