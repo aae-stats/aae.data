@@ -14,11 +14,12 @@ summarise_field <- function(x, val, field) {
     if (any(field == "survey_date"))
       input <- paste0(input, "_formatted")
     
-    # create a table of unique values
+    # create a table of unique values and counts of each value
     #   (table because some checks consider multiple fields)
     x <- x %>%
       select(all_of(input)) %>%
-      distinct()
+      group_by(across(seq_along(field))) %>%
+      summarise(count = n())
     
   } else {
     
@@ -38,7 +39,8 @@ summarise_field <- function(x, val, field) {
   list(
     message = message,
     table = x,
-    field = field
+    field = field,
+    input = input
   )
   
 }
@@ -144,9 +146,7 @@ summarise_catch <- function(x, val, field) {
       summarise(
         across(all_of(input),
                list(
-                 count = ~ suppressWarnings(sum(.x, na.rm = TRUE)),
-                 min = ~ suppressWarnings(min(.x, na.rm = TRUE)),
-                 max = ~ suppressWarnings(max(.x, na.rm = TRUE))
+                 count = ~ suppressWarnings(sum(.x, na.rm = TRUE))
                )
         )
       ) %>%

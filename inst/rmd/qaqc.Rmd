@@ -1,8 +1,6 @@
 ---
 output:
   html_document: default
-  word_document: default
-  pdf_document: default
 title: QA for AAEDB uploads
 date: "`r Sys.Date()`"
 ---
@@ -13,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 standards_link <- "https://delwpvicgovau.sharepoint.com/:x:/s/ecm_92/Ef0hdVPgLa5Eud1xoKyASvQBdQWWJhW0BmR-wpSLPCT_KA?e=Qzpv0K"
 ```
 
-This is an auto-generated report assessing the compatibility of the `r params$title` data set with the AAE database. The submitted file includes `r nrow(data)` rows of data.
+This is an auto-generated report assessing the compatibility of the `r filename` data set with the AAE database. The submitted file includes `r nrow(data)` rows of data.
 
 ## Input fields
 
@@ -109,6 +107,7 @@ Several fields require manual checking to ensure that included values are correc
 ```{r print-summaries, echo=FALSE, results="asis"}
 # field summaries
 for (i in seq_along(field_summary)) {
+  
   cat(colourise(field_summary[[i]]$message$message, field_summary[[i]]$colour))
   print(
     kable(
@@ -125,9 +124,7 @@ if (!is.null(spp)) {
   colnames(spp)[1:4] <- c("Input species", "VBA scientific name", "VBA common name", "Possible matches")
   print(kable(
     spp,
-    caption = "All species included in input data set with matched names from the VBA database where possible. Where no match is found, possible alternatives are suggested if a similar name exists in the VBA database.",
-    col.names = col_names
-    
+    caption = "All species included in input data set with matched names from the VBA database where possible. Where no match is found, possible alternatives are suggested if a similar name exists in the VBA database."
   )
         )
   cat("\n")
@@ -136,6 +133,10 @@ if (!is.null(spp)) {
 
 # size measurements
 for (i in seq_along(measurement_summary)) {
+  
+  # filter out missing or nan values
+  measurement_summary[[i]]$table <- measurement_summary[[i]]$table %>%
+    filter(across(1, ~ !grepl("No fish", .x)))
   
   # print a neat table listing min/max of these values
   cat(colourise(measurement_summary[[i]]$message$message, field_summary[[i]]$colour))

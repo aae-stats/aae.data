@@ -16,13 +16,13 @@
 #' 
 #' @examples 
 #' # to add
-generate_report <- function(data, title = NULL, output = "template.html") {
+generate_report <- function(data, filename = NULL, output = "template.html") {
   
   # set report title
-  if (is.null(title)) {
-    title <- "provided"
+  if (is.null(filename)) {
+    filename <- "provided"
   } else {
-    title <- paste0("**", title, "**")
+    filename <- paste0("**", filename, "**")
   }
   
   # clean column names
@@ -60,8 +60,26 @@ generate_report <- function(data, title = NULL, output = "template.html") {
   
   # and calculate summaries
   field_summary <- vector("list", length = length(fields_to_check))
-  for (i in seq_along(fields_to_check))
+  for (i in seq_along(fields_to_check)) {
+    
+    # summarise the target field
     field_summary[[i]] <- summarise_field(data, validated_fields, field = fields_to_check[[i]])
+    
+    # add some extra info if it's a survey date
+    if (any(fields_to_check[[i]] == "survey_date")) {
+      field_summary[[i]]$table <- field_summary[[i]]$table %>%
+        mutate(across(
+          1,
+          list(
+            survey_year = ~ year(.x),
+            survey_month = ~ month(.x)
+          )
+        )) %>%
+        select(3, 4, 1, 2)
+      colnames(field_summary[[i]]$table) <- c("Survey year", "Survey month", "Survey date", "Total surveys")
+    }
+    
+  }
   
   # check basic size measurements and extract ranges but focus on those that exist
   measurements_to_summarise <- c("total_length", "fork_length", "weight")
@@ -111,7 +129,7 @@ generate_report <- function(data, title = NULL, output = "template.html") {
     # add catch info
     for (i in seq_along(catch_summary)) {
       if ("species" %in% colnames(catch_summary[[i]])) {
-        spp <- spp %>% left_join(catch_summary[[i]] %>% select(count), by = c("spp" = "species"))
+        spp <- spp %>% left_join(catch_summary[[i]]$table, by = c("spp" = "species"))
         colnames(spp)[ncol(spp)] <- paste0("Total ", catches_to_summarise[i])
       }
     }
@@ -136,7 +154,6 @@ generate_report <- function(data, title = NULL, output = "template.html") {
   rmarkdown::render(
     input = rmd_path,
     output_file = output_path,
-    params = list(title = title),
     encoding = "UTF-8",
     quiet = TRUE
   )
