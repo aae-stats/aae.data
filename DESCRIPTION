@@ -1,6 +1,6 @@
 Package: aae.data
 Type: Package
-Title: Methods To Interact With The AAEDB 
+Title: Methods To Work With AAEDB Data
 Version: 0.0.0.9002
 Date: 2022-08-26
 Author: c(
@@ -15,8 +15,8 @@ Author: c(
   person(given = "Arthur Rylah Institute for Environmental Research",
          role = c("cph", "fnd")))
 Maintainer: Adrian Kitchingman <adrian.kitchingman@delwp.vic.gov.au>
-Description: A collection of tools and methods to interact with the
-  AAEDB, including QA/QC and database queries
+Description: A collection of tools and methods to run QA/QC and summarise
+  data intended for the AAEDB
 License: Apache License 2.0
 URL: https://github.com/aae-stats/aae.data
 BugReports: https://github.com/aae-stats/aae.data
