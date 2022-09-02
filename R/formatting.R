@@ -36,7 +36,7 @@ format_dates <- function(x, validate, orders = c("dmy", "ymd", "dmy_HMS", "ymd_H
 }
 
 # function to paste strings with correct use commas and "and"
-tidy_paste <- function(x) {
+tidy_paste <- function(x, max_print = 5) {
   
   # blank x means there was no fuzzy match
   if (length(x) == 0)
@@ -50,9 +50,21 @@ tidy_paste <- function(x) {
   if (length(x) == 2)
     out <- paste0(x, collapse = " or ")
   
-  # or use Oxford comma otherwise
-  if (length(x) > 2)
-    out <- paste0(c(paste0(x[seq_len(length(x) - 1)], collapse = ", "), x[length(x)]), collapse = ", or ")
+  # or use Oxford comma otherwise, truncating if more than max_print options
+  if (length(x) > 2) {
+    if (length(x) <= max_print) {
+      out <- paste0(c(paste0(x[seq_len(length(x) - 1)], collapse = ", "), x[length(x)]), collapse = ", or ")
+    } else {
+      term <- "matches"
+      if (length(x) == 6)
+        term <- "match"
+      out <- paste0(
+        c(paste0(x[seq_len(max_print)], collapse = ", "), 
+          paste0("or any of ", length(x) - max_print, " other ", term)),
+        collapse = ", "
+      )
+    }
+  }
   
   # return
   out
@@ -72,8 +84,15 @@ partial_match <- function(provided, available, max_distance = 2) {
     
     # only want to check if the string has non-blank characters
     if (nchar(trimws(provided[i])) > 0) {
+      
+      # calculate nearest matches
       idx <- agrepl(provided[i], available, max.distance = max_distance)
-      out[i] <- tidy_paste(available[idx])
+      
+      # and sort based on distance
+      difference <- adist(provided[i], available[idx])
+
+      # paste these into a clean, formatted string
+      out[i] <- tidy_paste(available[idx][order(difference)])
     }
     
   }

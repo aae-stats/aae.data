@@ -101,13 +101,14 @@ cat(colourise(duplicates$message$message, duplicates$message$colour))
 
 ## Data summaries
 
-Several fields require manual checking to ensure that included values are correct. This section lists all unique records of waterbody, survey date, gear type, coordinates, and species where these variables are included in the input data set. In addition, the ranges of common size measurements (total length, fork length, and weight) are listed if included in the input data set.
-
+Several fields require manual checking to ensure that included values are correct. This section lists all unique records of waterbody, survey date, gear type, and coordinates. Please check these values and ensure they are consistent with the relevant field survey program.
 
 ```{r print-summaries, echo=FALSE, results="asis"}
 # field summaries
 for (i in seq_along(field_summary)) {
   
+  cat(paste0("\n\n### ", paste0(field_summary[[i]]$field, collapse = " and "), "\n\n"))
+
   cat(colourise(field_summary[[i]]$message$message, field_summary[[i]]$colour))
   print(
     kable(
@@ -118,12 +119,18 @@ for (i in seq_along(field_summary)) {
   cat("\n")
   cat("\n\n ---- \n\n")
 }
+```
 
+## Species list
+
+The species field needs to include VBA accepted scientific names. Please ensure that any unmatched names are corrected, and provide scientific names if common names are detected.
+
+```{r species-summary, echo=FALSE, results="asis"}
 # print list of species if required
-if (!is.null(spp)) {
-  colnames(spp)[1:4] <- c("Input species", "VBA scientific name", "VBA common name", "Possible matches")
+if (!is.null(spp_sciname)) {
+  colnames(spp_sciname)[1:4] <- c("Input species", "VBA scientific name", "VBA common name", "Possible matches")
   print(kable(
-    spp,
+    spp_sciname,
     caption = "All species included in input data set with matched names from the VBA database where possible. Where no match is found, possible alternatives are suggested if a similar name exists in the VBA database."
   )
         )
@@ -131,15 +138,45 @@ if (!is.null(spp)) {
   cat("\n\n ---- \n\n")
 }
 
+# and print match common names if these were provided instead of scientific names
+if (!is.null(spp_common)) {
+  cat(colourise(paste0(
+    "It looks like species includes common names. ",
+    "These have been matched to VBA names here but uploaded data sets ",
+    "should fill the species field with scientific names."
+  ),
+  "red"
+  ))
+  colnames(spp_common)[1:4] <- c("Input species", "VBA scientific name", "VBA common name", "Possible matches")
+  print(kable(
+    spp_common,
+    caption = "All species included in input data set with matched names from the VBA database where possible. Where no match is found, possible alternatives are suggested if a similar name exists in the VBA database."
+  )
+        )
+  cat("\n")
+  cat("\n\n ---- \n\n")
+}
+```
+
+## Length and weight measurements
+
+Please check length and weight measurements to ensure that values appear correct for each species. In particular, check that values are consistent with expected sizes (in mm for lengths and g for weight) and ensure that lengths for species with forked tails are recorded correctly in the fork_length field. Note that a blank entry in the "Group" (species) column may indicate any number of white spaces in the species field (e.g., "", " ", "  ") but the species column should be entered as "No fish" in these instances.
+
+```{r measurement-check, echo=FALSE, results="asis"}
 # size measurements
 for (i in seq_along(measurement_summary)) {
   
+  cat(paste0("\n\n### ", measurement_summary[[i]]$field, "\n\n"))
+
   # filter out missing or nan values
   measurement_summary[[i]]$table <- measurement_summary[[i]]$table %>%
-    filter(across(1, ~ !grepl("No fish", .x, ignore.case = TRUE)))
+    filter(
+      across(1, ~ !grepl("No fish", .x, ignore.case = TRUE)),
+      across(2, ~ !(is.infinite(.x) | is.na(.x)))
+    )
   
   # print a neat table listing min/max of these values
-  cat(colourise(measurement_summary[[i]]$message$message, field_summary[[i]]$colour))
+  cat(colourise(measurement_summary[[i]]$message$message, measurement_summary[[i]]$colour))
   print(kable(measurement_summary[[i]]$table,
               col.names = c(
                 "Group",
@@ -152,8 +189,12 @@ for (i in seq_along(measurement_summary)) {
   cat("\n")
   cat("\n\n ---- \n\n")
   
+  # pull out data for a single variable
+  data_sub <- measurement_summary[[i]]$data
+  # TODO: update this to filter out species with 0 or 1 observations
+
   # and create a plot to go with this, removing NA records
-  p <- measurement_summary[[i]]$data %>%
+  p <- data_sub %>%
     filter(!is.na(x)) %>%
     ungroup() %>%
     ggplot() +
@@ -162,11 +203,13 @@ for (i in seq_along(measurement_summary)) {
     ylab("Count")
 
   # facet by species if included in data set
-  if (ncol(measurement_summary[[i]]$data) == 2)
+  if (ncol(data_sub) == 2)
     p <- p + facet_wrap( ~ species, scales = "free")
   
   # and plot it
   print(p)
+  
+  cat("\n\n ---- \n\n")
   
 }
 
