@@ -4,7 +4,7 @@
 \alias{generate_report}
 \title{Generate a QA/QC report on a data set for the AAEDB}
 \usage{
-generate_report(data, output = "template.html")
+generate_report(data, filename = NULL, output = "template.html")
 }
 \arguments{
 \item{data}{a data set to be imported to the AAEDB, provided
