@@ -69,8 +69,13 @@ partial_match <- function(provided, available, max_distance = 2) {
   # check each element of provided and return
   #    fuzzy matched fields
   for (i in seq_along(provided)) {
-    idx <- agrepl(provided[i], available, max.distance = max_distance)
-    out[i] <- tidy_paste(available[idx])
+    
+    # only want to check if the string has non-blank characters
+    if (nchar(trimws(provided[i])) > 0) {
+      idx <- agrepl(provided[i], available, max.distance = max_distance)
+      out[i] <- tidy_paste(available[idx])
+    }
+    
   }
   
   # return
