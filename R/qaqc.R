@@ -304,10 +304,10 @@ check_duplicates <- function(data, validate) {
     
     # pull out site codes and site descriptions
     site_code <- validate %>% 
-      filter(fields == "site_code") %>% 
+      filter(grepl("site_code", fields)) %>% 
       pull(xlsx_fields)
     site_desc <- validate %>% 
-      filter(fields == "site_desc") %>% 
+      filter(grepl("site_desc", fields)) %>% 
       pull(xlsx_fields)
     
     # split up by waterbody if known
@@ -315,7 +315,7 @@ check_duplicates <- function(data, validate) {
       
       # collate waterbody and site info
       waterbody_field <- validate %>%
-        filter(fields == "waterbody") %>%
+        filter(grepl("waterbody", fields)) %>% 
         pull(xlsx_fields)
       
       # pull out distinct entries and check for multiple descriptions per site
