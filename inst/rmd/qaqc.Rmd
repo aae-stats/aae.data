@@ -162,7 +162,7 @@ if (!is.null(spp_common)) {
 
 ## Length and weight measurements
 
-Please check length and weight measurements to ensure that values appear correct for each species. In particular, check that values are consistent with expected sizes (in mm for lengths and g for weight) and ensure that lengths for species with forked tails are recorded correctly in the fork_length field. Note that a blank entry in the "Group" (species) column may indicate any number of white spaces in the species field (e.g., "", " ", "  ") but the species column should be entered as "No fish" in these instances.
+Please check length and weight measurements to ensure that values appear correct for each species. In particular, check that values are consistent with expected sizes (in mm for lengths and g for weight) and ensure that lengths for species with forked tails are recorded correctly in the fork_length field. Note that a blank entry in the "Group" (species) column may indicate one or more white spaces in the species field but the species column should be entered as "No fish" in these instances.
 
 If lengths and weights are included, these are plotted below, along with Fulton's K estimates. These plots can be used to diagnose errors in units (e.g. lengths recorded in cm or weights recorded in kg). Typical Fulton's K values range from 0.5 to 1.5, with values > 5 likely resulting from an error in the data.
 
