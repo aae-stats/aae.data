@@ -11,6 +11,8 @@ knitr::opts_chunk$set(echo = TRUE)
 standards_link <- "https://delwpvicgovau.sharepoint.com/:x:/s/ecm_92/Ef0hdVPgLa5Eud1xoKyASvQBdQWWJhW0BmR-wpSLPCT_KA?e=Qzpv0K"
 ```
 
+# {.tabset}
+
 This is an auto-generated report assessing the compatibility of the `r filename` data set with the AAE database. The submitted file includes `r nrow(data)` rows of data.
 
 ## Input fields
@@ -162,6 +164,8 @@ if (!is.null(spp_common)) {
 
 Please check length and weight measurements to ensure that values appear correct for each species. In particular, check that values are consistent with expected sizes (in mm for lengths and g for weight) and ensure that lengths for species with forked tails are recorded correctly in the fork_length field. Note that a blank entry in the "Group" (species) column may indicate any number of white spaces in the species field (e.g., "", " ", "  ") but the species column should be entered as "No fish" in these instances.
 
+If lengths and weights are included, these are plotted below, along with Fulton's K estimates. These plots can be used to diagnose errors in units (e.g. lengths recorded in cm or weights recorded in kg). Typical Fulton's K values range from 0.5 to 1.5, with values > 5 likely resulting from an error in the data.
+
 ```{r measurement-check, echo=FALSE, results="asis"}
 # size measurements
 for (i in seq_along(measurement_summary)) {
@@ -191,7 +195,18 @@ for (i in seq_along(measurement_summary)) {
   
   # pull out data for a single variable
   data_sub <- measurement_summary[[i]]$data
-  # TODO: update this to filter out species with 0 or 1 observations
+  
+  # filter out species with 0 or 1 observations (if
+  #   species are included)
+  if (ncol(data_sub) == 2) {
+    n_obs <- data_sub %>%
+      group_by(species) %>%
+      summarise(count = n())
+    data_sub <- data_sub %>%
+      left_join(n_obs, by = "species") %>%
+      filter(count > 1) %>%
+      select(-count)
+  }
 
   # and create a plot to go with this, removing NA records
   p <- data_sub %>%
@@ -209,6 +224,75 @@ for (i in seq_along(measurement_summary)) {
   # and plot it
   print(p)
   
+  cat("\n\n ---- \n\n")
+  
+}
+
+```
+
+
+```{r fulton-check, echo=FALSE, results="asis"}
+# plot fultons K if lengths and weights are available
+weight_id <- grepl("weight", measurements_to_summarise)
+length_id <- grepl("length", measurements_to_summarise)
+if (any(weight_id) & any(length_id)) {
+
+  cat(paste0("\n\n### Fulton's K \n\n"))
+  
+  # combine data sets into a single matrix
+  fulton <- lapply(
+    measurement_summary[weight_id | length_id],
+    function(x) x$data$x
+  )
+  fulton <- do.call(cbind, fulton)
+  
+  # check if two length variables are included, need to
+  #   combine both if so
+  if (sum(length_id) == 2) {
+    length_measurement <- ifelse(
+      is.na(fulton[, which(length_id)[1]]),
+      fulton[, which(length_id)[2]],
+      fulton[, length_id[1]]
+    )
+  } else {
+    length_measurement <- fulton[, length_id]
+  }
+  weight_measurement <- fulton[, weight_id]
+
+  # identify any NA values or 0 lengths
+  idx <- !(is.na(length_measurement) | is.na(weight_measurement))
+  idx <- idx & length_measurement > 0
+  
+  # calculate fulton index
+  fulton <- 100000 * weight_measurement[idx] / (length_measurement[idx] ^ 3)
+  
+  # filter out missing or nan values
+  measurement_summary[[i]]$table <- measurement_summary[[i]]$table %>%
+    filter(
+      across(1, ~ !grepl("No fish", .x, ignore.case = TRUE)),
+      across(2, ~ !(is.infinite(.x) | is.na(.x)))
+    )
+  
+  # and create a plot to go with the fultons k estimates
+  p <- ggplot() +
+    geom_histogram(aes(x = fulton), bins = 20) +
+    xlab("Fulton's K") +
+    ylab("Count")
+
+  # and plot it
+  print(p)
+
+  cat("\n\n ---- \n\n")
+  
+  # and plot lengths against weights
+  p <- ggplot() + 
+    geom_point(aes(x = length_measurement[idx], y = weight_measurement[idx])) +
+    xlab("Total Length or Fork Length (mm)") +
+    ylab("Weight (g)")
+    
+  # and plot it
+  print(p)
+
   cat("\n\n ---- \n\n")
   
 }
