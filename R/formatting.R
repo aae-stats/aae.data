@@ -8,7 +8,6 @@ clean_columns <- function(x) {
 }
 
 # internal function to check and format dates
-#' @import lubridate
 format_dates <- function(x, validate, orders = c("dmy", "ymd", "dmy_HMS", "ymd_HMS")) {
   
   # list all date fields in the input data set that have associated data
@@ -22,8 +21,8 @@ format_dates <- function(x, validate, orders = c("dmy", "ymd", "dmy_HMS", "ymd_H
   for (i in seq_len(ndate)) {
     x <- x %>%
       mutate(
-        tmp_date = parse_date_time(
-          data[, date_fields$xlsx_fields[i]],
+        tmp_date = parse_my_date(
+          data %>% pull(all_of(date_fields$xlsx_fields[i])),
           orders = orders
         )
       ) %>%
@@ -31,6 +30,24 @@ format_dates <- function(x, validate, orders = c("dmy", "ymd", "dmy_HMS", "ymd_H
   }
   
   # return full data set with formatted dates
+  x
+  
+}
+
+# internal function to parse a date but check if it's POSIX format first
+#' @import lubridate
+parse_my_date <- function(x, orders, ...) {
+  
+  # check if it's POSIX
+  if (is.POSIXct(x) | is.POSIXlt(x) | is.POSIXt(x)) {
+    # direct conversion if it is
+    x <- as.Date(x)
+  } else {
+    # use lubridate's parse_date_time otherwise
+    x <- parse_date_time(x, orders = orders)
+  }
+  
+  # return
   x
   
 }
