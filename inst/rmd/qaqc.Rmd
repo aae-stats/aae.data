@@ -246,6 +246,9 @@ if (any(weight_id) & any(length_id)) {
   )
   fulton <- do.call(cbind, fulton)
   
+  # pull out species info (should be NULL if it doesn't exist)
+  species <- measurement_summary[[1]]$data$species
+  
   # check if two length variables are included, need to
   #   combine both if so
   if (sum(length_id) == 2) {
@@ -254,8 +257,17 @@ if (any(weight_id) & any(length_id)) {
       fulton[, which(length_id)[2]],
       fulton[, length_id[1]]
     )
+    length_type <- ifelse(
+      is.na(fulton[, which(length_id)[1]]),
+      "total_length",
+      "fork_length"
+    )
   } else {
     length_measurement <- fulton[, length_id]
+    length_type <- rep(
+      measurements_to_summarise[grepl("length", measurements_to_summarise)], 
+      length(length_measurement)
+    )
   }
   weight_measurement <- fulton[, weight_id]
 
@@ -266,18 +278,26 @@ if (any(weight_id) & any(length_id)) {
   # calculate fulton index
   fulton <- 100000 * weight_measurement[idx] / (length_measurement[idx] ^ 3)
   
-  # filter out missing or nan values
-  measurement_summary[[i]]$table <- measurement_summary[[i]]$table %>%
-    filter(
-      across(1, ~ !grepl("No fish", .x, ignore.case = TRUE)),
-      across(2, ~ !(is.infinite(.x) | is.na(.x)))
-    )
-  
+  # combine everything together
+  plot_data <- data.frame(
+    fulton = NA,
+    weight = weight_measurement,
+    length = length_measurement,
+    type = length_type
+  )
+  plot_data$fulton[idx] <- fulton
+  if (!is.null(species))
+    plot_data$species <- species
+
   # and create a plot to go with the fultons k estimates
-  p <- ggplot() +
+  p <- plot_data %>% ggplot() +
     geom_histogram(aes(x = fulton), bins = 20) +
     xlab("Fulton's K") +
     ylab("Count")
+  
+  # facet by species if available
+  if (!is.null(species))
+    p <- p + facet_wrap( ~ species, scales = "free")
 
   # and plot it
   print(p)
@@ -285,10 +305,27 @@ if (any(weight_id) & any(length_id)) {
   cat("\n\n ---- \n\n")
   
   # and plot lengths against weights
-  p <- ggplot() + 
-    geom_point(aes(x = length_measurement[idx], y = weight_measurement[idx])) +
+  p <- plot_data %>%
+    mutate(
+      type = ifelse(
+        length <= 0,
+        "Negative value", 
+        ifelse(type == "total_length", "Total length", "Fork length")                   
+      )
+    ) %>%
+    filter(!is.na(length), !is.na(weight)) %>%
+    ggplot() + 
+    geom_point(
+      aes(x = length, y = weight, col = type)
+    ) +
+    scale_color_brewer(type = "qual", palette = "Set2") +
     xlab("Total Length or Fork Length (mm)") +
-    ylab("Weight (g)")
+    ylab("Weight (g)") +
+    theme(legend.position = "bottom")
+  
+  # facet by species if available
+  if (!is.null(species))
+    p <- p + facet_wrap( ~ species, scales = "free")
     
   # and plot it
   print(p)

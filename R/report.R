@@ -116,6 +116,7 @@ generate_report <- function(data, filename = NULL, output = "template.html") {
       trimws() %>%
       unique()
     spp <- spp[spp != ""]
+    spp <- spp[!is.na(spp)]
     
     # check how many common names and sci names match
     idx <- match(spp, species_lu$scientific_name)
