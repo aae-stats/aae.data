@@ -1,6 +1,6 @@
-## `aae.data`: methods to interact with the AAEDB
+## `aae.data`: methods to check AAE field data prior to database uploads 
 
-The `aae.data` package is a suite of methods to interact with the AAEDB. The current purpose of this package is to support QA/QC of data sets to be uploaded to the database. Future extensions will include tools to download, reformat, and analyse data from the AAEDB.
+The `aae.data` package supports QA/QC of data sets to be uploaded to the database. Future extensions will include tools to reformat and analyse data from the AAEDB.
 
 ## Usage
 
@@ -24,5 +24,5 @@ generate_report(data)
 
 Please leave feedback, bug reports, or feature requests at the GitHub [issues page](https://github.com/aae-stats/aae.data/issues).
 
-Last updated: 26 August 2022
+Last updated: 7 December 2022
 
