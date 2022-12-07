@@ -1,4 +1,4 @@
-## `aae.data`: methods to check AAE field data prior to database uploads 
+## `aae.data`: methods to perform QA/QC on AAE data 
 
 The `aae.data` package supports QA/QC of data sets to be uploaded to the database. Future extensions will include tools to reformat and analyse data from the AAEDB.
 
