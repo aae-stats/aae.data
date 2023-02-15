@@ -4,7 +4,7 @@
 clean_columns <- function(x) {
   colnames(x) <- gsub("^X\\.|^\\.|\\.+$", "", colnames(x))
   colnames(x) <- gsub("\\.+" , "_", colnames(x))
-  x[, colnames(data) != ""]
+  x[, colnames(x) != ""]
 }
 
 # internal function to check and format dates
@@ -22,7 +22,7 @@ format_dates <- function(x, validate, orders = c("dmy", "ymd", "dmy_HMS", "ymd_H
     x <- x %>%
       mutate(
         tmp_date = parse_my_date(
-          data %>% pull(all_of(date_fields$xlsx_fields[i])),
+          x %>% pull(all_of(date_fields$xlsx_fields[i])),
           orders = orders
         )
       ) %>%

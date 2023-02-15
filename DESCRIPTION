@@ -1,8 +1,8 @@
 Package: aae.data
 Type: Package
 Title: Methods To Work With AAEDB Data
-Version: 0.0.0.9003
-Date: 2022-09-07
+Version: 0.0.0.9004
+Date: 2023-02-15
 Author: c(
   person(given = "Adrian",
          family = "Kitchingman",
