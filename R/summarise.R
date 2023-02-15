@@ -72,12 +72,12 @@ summarise_measurement <- function(x, val, field) {
         select(all_of(sp_input), all_of(input)) %>%
         group_by(across(1))
       plot_data <- data.frame(
-        x = x %>% pull(2),
+        x = x %>% pull(2) %>% as.numeric(),
         species = x %>% pull(1)
       )
     }
-        
-    # calculate weight range for input variable
+
+    # calculate range for input variable
     x <- x %>%
       summarise(
         across(all_of(input),
