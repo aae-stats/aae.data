@@ -120,8 +120,19 @@ summary_message <- function(input, match) {
     } else {
       
       # error if more than two values
-      if (length(input) > 2)
-        stop("input should have one or two values", call. = FALSE)
+      if (length(input) > 2) {
+        stop(
+          paste0(
+            "The ", paste(match, collapse = "/"),
+            " field contains duplicate values: ",
+            paste(input, collapse = ", "), ". ",
+            " There should be one field (column) for ",
+            ifelse(length(match) == 2, "each of ", ""),
+            paste(match, collapse = "/")
+          ), 
+          call. = FALSE
+        )
+      }
       
       # otherwise need to combine two field names (typically coordinates)
       check <- c(
