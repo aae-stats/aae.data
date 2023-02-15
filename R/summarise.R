@@ -76,7 +76,11 @@ summarise_measurement <- function(x, val, field) {
         species = x %>% pull(1)
       )
     }
-
+    
+    # force measurement to numeric if not already
+    if (!is.numeric(x[[input]]))
+      x[[input]] <- as.numeric(x[[input]])
+    
     # calculate range for input variable
     x <- x %>%
       summarise(
