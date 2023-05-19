@@ -8,7 +8,7 @@ clean_columns <- function(x) {
 }
 
 # internal function to check and format dates
-format_dates <- function(x, validate, orders = c("dmy", "ymd", "dmy_HMS", "ymd_HMS")) {
+format_dates <- function(x, validate, orders = c("dmy", "ymd", "dmy_HMS", "ymd_HMS", "dmy_HM", "ymd_HM")) {
   
   # list all date fields in the input data set that have associated data
   date_fields <- validate %>% filter(data_type == "date") %>% na.omit()
