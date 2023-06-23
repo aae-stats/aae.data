@@ -207,22 +207,31 @@ for (i in seq_along(measurement_summary)) {
       filter(count > 1) %>%
       select(-count)
   }
-
-  # and create a plot to go with this, removing NA records
-  p <- data_sub %>%
-    filter(!is.na(x)) %>%
-    ungroup() %>%
-    ggplot() +
-    geom_histogram(aes(x = x), bins = 20) +
-    xlab(measurement_summary[[i]]$field) +
-    ylab("Count")
-
-  # facet by species if included in data set
-  if (ncol(data_sub) == 2)
-    p <- p + facet_wrap( ~ species, scales = "free")
   
-  # and plot it
-  print(p)
+  # only plot not NA, otherwise print a message that all values are NA
+  if (!all(is.na(data_sub$x))) {
+    
+    # and create a plot to go with this, removing NA records
+    p <- data_sub %>%
+      filter(!is.na(x)) %>%
+      ungroup() %>%
+      ggplot() +
+      geom_histogram(aes(x = x), bins = 20) +
+      xlab(measurement_summary[[i]]$field) +
+      ylab("Count")
+    
+    # facet by species if included in data set
+    if (ncol(data_sub) == 2)
+      p <- p + facet_wrap( ~ species, scales = "free")
+    
+    # and plot it
+    print(p)
+    
+  } else {
+    
+    cat(paste0("\n\n#### All values of ", measurement_summary[[i]]$field, " are NA\n\n"))
+      
+  }
   
   cat("\n\n ---- \n\n")
   
