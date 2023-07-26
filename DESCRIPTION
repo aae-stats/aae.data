@@ -29,8 +29,11 @@ Imports:
   readxl,
   knitr,
   dplyr,
+  lubridate,
   stringr,
-  rmarkdown
+  rmarkdown,
+  ggplot2,
+  rstudioapi
 Suggests:
   testthat,
   spelling
