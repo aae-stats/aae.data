@@ -11,10 +11,13 @@ validate_data <- function(x, val, mga = NULL) {
   match <- val[["fields"]]
   no_null <- val[["no_nulls"]]
   
+  # set up a tmp object from which to pull inputs
+  xtmp <- x
+  
   # pull out input fields from validation data  
   x <- x %>%
     mutate(
-      test = x %>% pull(all_of(input)),
+      test = xtmp %>% pull(all_of(input)),
       test = as.character(test),
       test = ifelse(test == "" | is.na(test), "No value", test)
     )

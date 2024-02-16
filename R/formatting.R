@@ -16,13 +16,16 @@ format_dates <- function(x, validate, orders = c("dmy", "ymd", "dmy_HMS", "ymd_H
   # how many date types are there?
   ndate <- length(date_fields$xlsx_fields)
   
+  # create a tmp object from which to pull dates
+  xtmp <- x
+  
   # loop over these, formatting each in turn and recording the output
   #   as a new field
   for (i in seq_len(ndate)) {
     x <- x %>%
       mutate(
         tmp_date = parse_my_date(
-          x %>% pull(all_of(date_fields$xlsx_fields[i])),
+          xtmp %>% pull(all_of(date_fields$xlsx_fields[i])),
           orders = orders
         )
       ) %>%
